@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Polla Mundial 2026</title>
+<style>
+:root{
+  --dk:#0a1628;--nv:#0f2744;--bl:#1a4b8c;--ac:#e8c840;
+  --gn:#1a7a3c;--gnl:#d4edda;--rd:#b91c1c;--or:#d97706;
+  --gy:#f0f4f8;--gl:#e8edf2;--wh:#fff;--tx:#1a2840;--mt:#6b7a99;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--gy);color:var(--tx);min-height:100vh}
+
+/* ── HEADER ── */
+.hdr{background:linear-gradient(90deg,var(--dk),var(--nv));padding:12px 16px;position:sticky;top:0;z-index:100;box-shadow:0 2px 14px rgba(0,0,0,.45)}
+.hdr-inner{max-width:900px;margin:0 auto;display:flex;align-items:center;gap:10px}
+.hdr-logo{font-size:1.4rem}
+.hdr-title{flex:1}
+.hdr-title h1{font-size:1rem;font-weight:800;color:var(--ac);line-height:1.2}
+.hdr-title p{font-size:.68rem;color:rgba(255,255,255,.4);margin-top:1px}
+.live-dot{background:var(--rd);color:#fff;padding:3px 10px;border-radius:14px;font-size:.68rem;font-weight:800;letter-spacing:.5px;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.55}}
+
+/* ── TABS ── */
+.tabs{background:var(--nv);border-bottom:2px solid rgba(255,255,255,.07);overflow-x:auto;-ms-overflow-style:none;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tabs-inner{max-width:900px;margin:0 auto;display:flex;white-space:nowrap}
+.tab-btn{padding:12px 16px;color:rgba(255,255,255,.42);font-size:.78rem;font-weight:700;border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;transition:all .2s;white-space:nowrap}
+.tab-btn.active{color:var(--ac);border-bottom-color:var(--ac)}
+
+/* ── CONTENT ── */
+.content{max-width:900px;margin:0 auto;padding:14px 12px 72px}
+.panel{display:none}.panel.active{display:block}
+
+/* ── CARD ── */
+.card{background:var(--wh);border-radius:10px;box-shadow:0 2px 14px rgba(10,22,40,.1);margin-bottom:14px;overflow:hidden}
+.card-hdr{padding:12px 16px;background:var(--dk);color:var(--wh);font-weight:700;font-size:.88rem;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.card-body{padding:14px}
+
+/* ── PARTICIPANTES PANEL ── */
+.part-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+.part-card{border-radius:10px;border:2px solid var(--gl);padding:14px 12px;cursor:pointer;transition:all .18s;text-align:center;background:var(--wh)}
+.part-card:hover{border-color:var(--bl);background:#f0f6ff}
+.part-card.me{border-color:var(--ac);background:#fffbe6}
+.part-card.empty{border-style:dashed;color:var(--mt)}
+.part-avatar{width:44px;height:44px;border-radius:50%;background:var(--nv);color:var(--ac);font-size:1.1rem;font-weight:800;display:flex;align-items:center;justify-content:center;margin:0 auto 8px}
+.part-name{font-weight:700;font-size:.88rem;color:var(--tx)}
+.part-pts{font-size:.72rem;color:var(--mt);margin-top:3px}
+.part-name-input{width:100%;border:none;background:none;text-align:center;font-size:.88rem;font-weight:700;color:var(--tx);outline:none;padding:2px 0}
+.part-name-input::placeholder{color:var(--mt);font-weight:400}
+.you-badge{display:inline-block;background:var(--ac);color:var(--dk);font-size:.62rem;font-weight:800;padding:1px 7px;border-radius:8px;margin-top:4px}
+
+/* ── PARTICIPANTE ACTIVO BANNER ── */
+.active-banner{background:linear-gradient(90deg,var(--nv),var(--bl));border-radius:10px;padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;gap:12px;color:var(--wh)}
+.active-banner .ava{width:40px;height:40px;border-radius:50%;background:var(--ac);color:var(--dk);font-size:1.1rem;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.active-banner .info{flex:1}
+.active-banner .nm{font-weight:800;font-size:1rem}
+.active-banner .sub{font-size:.72rem;opacity:.6;margin-top:1px}
+.btn-change{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:6px;color:rgba(255,255,255,.7);padding:6px 12px;font-size:.75rem;cursor:pointer;white-space:nowrap}
+
+/* ── FILTER BAR ── */
+.filter-bar{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.filter-label{font-size:.75rem;font-weight:700;color:var(--mt)}
+.seg{display:flex;background:var(--gl);border-radius:8px;padding:2px;gap:2px}
+.seg-btn{padding:6px 13px;border-radius:6px;border:none;background:none;font-size:.78rem;font-weight:700;cursor:pointer;color:var(--mt);transition:all .18s;white-space:nowrap}
+.seg-btn.active{background:var(--dk);color:var(--ac)}
+.today-badge{background:var(--rd);color:#fff;padding:3px 9px;border-radius:12px;font-size:.7rem;font-weight:800}
+
+/* ── MATCHES ── */
+.date-block{margin-bottom:4px}
+.date-hdr{font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;color:var(--wh);background:var(--bl);padding:7px 10px;border-radius:6px 6px 0 0;display:flex;align-items:center;gap:8px}
+.date-hdr.today-hdr{background:var(--rd)}
+.group-hdr{font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;color:var(--mt);padding:8px 6px 4px;border-bottom:1.5px solid var(--gl)}
+
+.mrow{display:grid;align-items:center;padding:8px 6px;border-bottom:1px solid var(--gl);gap:4px;transition:background .12s}
+.mrow:hover{background:#f8fafc}
+.mrow.played{background:#f0fff4}
+.mrow.today{background:#fffde7}
+/* grid: #(28) date(60) hometeam(1fr) score(auto) awayteam(1fr) predL(38) predV(38) penL(34) penV(34) pts(36) */
+.mrow{grid-template-columns:26px 58px 1fr auto 1fr 38px 38px 34px 34px 38px}
+.mn{font-size:.65rem;color:var(--mt);font-weight:700;text-align:center}
+.mdate{font-size:.66rem;color:var(--mt);line-height:1.3}
+.mtime{font-size:.6rem;color:var(--bl);font-weight:600}
+.team{font-size:.8rem;font-weight:700;display:flex;align-items:center;gap:4px}
+.team.home{justify-content:flex-end}
+.tflag{width:18px;height:13px;border-radius:1px;object-fit:cover;flex-shrink:0}
+.score-box{display:flex;align-items:center;gap:3px;justify-content:center}
+.score-num{width:26px;height:26px;border-radius:4px;border:2px solid var(--gl);text-align:center;font-size:.85rem;font-weight:700;background:var(--wh);color:var(--tx)}
+.score-num.filled{background:#e8f5e9;border-color:var(--gn);color:var(--gn)}
+.score-dash{color:var(--mt);font-weight:700;font-size:.8rem}
+.pred-inp{width:34px;height:30px;border-radius:5px;border:2px solid #e5e7eb;text-align:center;font-size:.88rem;font-weight:700;background:#fffde7;outline:none;transition:border-color .18s}
+.pred-inp:focus{border-color:var(--ac)}
+.pred-inp.pen{background:#fff3e0;border-color:#fcd29a}
+.pred-inp:disabled{background:#f3f4f6;opacity:.45;cursor:not-allowed}
+.pts-cell{font-weight:800;font-size:.88rem;text-align:center}
+.pc12{color:#0f5e2e}.pc6{color:var(--gn)}.pcp{color:var(--or)}.pc0{color:var(--rd)}
+
+/* col headers */
+.col-hdr{display:grid;grid-template-columns:26px 58px 1fr auto 1fr 38px 38px 34px 34px 38px;gap:4px;padding:6px 6px;background:#f1f5f9;border-bottom:2px solid var(--gl)}
+.col-hdr span{font-size:.62rem;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--mt);text-align:center}
+.col-hdr .ch-team{text-align:right}.col-hdr .ch-away{text-align:left}
+
+/* ── RANKING ── */
+.rank-table{width:100%;border-collapse:collapse}
+.rank-table th{background:var(--dk);color:var(--wh);padding:9px 7px;font-size:.7rem;font-weight:700;text-align:center}
+.rank-table th:nth-child(2){text-align:left;padding-left:12px}
+.rank-table td{padding:11px 7px;text-align:center;border-bottom:1px solid var(--gl)}
+.rank-table td:nth-child(2){text-align:left;padding-left:12px}
+.rpos{font-size:1.2rem;font-weight:900}
+.r1{color:#b8860b}.r2{color:#777}.r3{color:#8B4513}
+.rname{font-weight:800;font-size:.9rem}
+.rpts{font-size:1.3rem;font-weight:900}
+.rbadge{display:inline-block;padding:2px 7px;border-radius:8px;font-size:.66rem;font-weight:700}
+.bb{background:#dbeafe;color:#1e40af}.bg{background:#dcfce7;color:#14532d}.ba{background:#fef9c3;color:#854d0e}
+.me-row td{background:#fffbe6!important}
+
+/* ── CONSULTA ── */
+.lsel{width:100%;padding:10px 13px;border:2px solid var(--gl);border-radius:8px;font-size:.88rem;background:var(--wh);outline:none;color:var(--tx);margin-bottom:12px}
+.match-banner{background:linear-gradient(135deg,var(--dk),var(--nv));border-radius:10px;padding:16px;margin-bottom:12px;color:var(--wh);text-align:center}
+.bn-teams{font-size:1.15rem;font-weight:900;display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+.bn-score{font-size:1.8rem;font-weight:900;color:var(--ac);margin:0 6px}
+.bn-meta{font-size:.7rem;color:rgba(255,255,255,.4)}
+.lu-row{display:grid;grid-template-columns:26px 1fr 60px 60px 44px;gap:8px;padding:9px 8px;border-bottom:1px solid var(--gl);align-items:center}
+.lu-row.ok{background:#f0fff4}.lu-row.ng{background:#fff5f5}
+.lu-num{width:24px;height:24px;border-radius:50%;background:var(--dk);color:var(--ac);font-size:.68rem;font-weight:800;display:flex;align-items:center;justify-content:center}
+.lu-name{font-weight:700;font-size:.83rem}
+.lu-pred{font-size:.95rem;font-weight:900;color:var(--bl);text-align:center}
+.lu-pts{font-size:.95rem;font-weight:900;text-align:right}
+.lu-pts.h{color:var(--gn)}.lu-pts.m{color:var(--or)}.lu-pts.z{color:var(--rd)}
+
+/* ── STATUS ── */
+.status-bar{display:flex;align-items:center;gap:5px;font-size:.7rem;color:rgba(255,255,255,.45)}
+.sdot{width:6px;height:6px;border-radius:50%;background:#22c55e;flex-shrink:0}
+.sdot.spin{background:var(--or);animation:pulse 1s infinite}
+
+/* ── BOTTOM NAV ── */
+.bnav{position:fixed;bottom:0;left:0;right:0;background:var(--dk);border-top:1px solid rgba(255,255,255,.07);display:flex;z-index:99}
+.bnav-btn{flex:1;padding:8px 4px 6px;text-align:center;font-size:.58rem;font-weight:700;color:rgba(255,255,255,.32);cursor:pointer;border:none;background:none;line-height:1.3}
+.bnav-btn.active{color:var(--ac)}
+.bnav-ico{font-size:1.2rem;display:block;margin-bottom:1px}
+
+/* ── BTN ── */
+.btn{padding:8px 14px;border-radius:7px;font-weight:700;cursor:pointer;font-size:.8rem;border:none;transition:opacity .2s}
+.btn:active{opacity:.78}
+.btn-gn{background:var(--gn);color:#fff}
+.btn-bl{background:var(--bl);color:#fff}
+.btn-sm{padding:5px 11px;font-size:.74rem}
+.btn-rd{background:var(--rd);color:#fff}
+
+/* ── NOTICE ── */
+.notice{padding:9px 12px;border-radius:0 8px 8px 0;font-size:.77rem;margin-bottom:12px;line-height:1.5}
+.notice.info{background:var(--gnl);border-left:3px solid var(--gn);color:#145a32}
+.notice.warn{background:#fff3cd;border-left:3px solid var(--or);color:#7a5200}
+
+/* ── TOAST ── */
+#toast{position:fixed;bottom:66px;left:50%;transform:translateX(-50%);background:var(--dk);color:var(--ac);padding:7px 18px;border-radius:18px;font-size:.78rem;font-weight:700;opacity:0;transition:opacity .28s;pointer-events:none;z-index:999;white-space:nowrap}
+#toast.show{opacity:1}
+
+.empty{text-align:center;padding:28px;color:var(--mt);font-size:.83rem}
+.loader{text-align:center;padding:20px;color:var(--mt);font-size:.82rem}
+
+@media(max-width:600px){
+  .mrow,.col-hdr{grid-template-columns:22px 46px 1fr auto 1fr 34px 34px 0px 0px 34px}
+  .pred-inp.pen,.col-hdr .ch-pen{display:none}
+  .team{font-size:.74rem}
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="hdr">
+  <div class="hdr-inner">
+    <div class="hdr-logo">🏆</div>
+    <div class="hdr-title">
+      <h1>Polla Mundial 2026</h1>
+      <p>🇺🇸 USA · 🇨🇦 Canadá · 🇲🇽 México · 11 Jun – 19 Jul · 104 partidos</p>
+    </div>
+    <span class="live-dot">🔴 EN VIVO</span>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs">
+  <div class="tabs-inner">
+    <button class="tab-btn active" onclick="showTab('participantes',this)">👥 Participantes</button>
+    <button class="tab-btn" onclick="showTab('predicciones',this)">📝 Predicciones</button>
+    <button class="tab-btn" onclick="showTab('resultados',this)">⚽ Resultados</button>
+    <button class="tab-btn" onclick="showTab('tabla',this)">🏅 Tabla</button>
+    <button class="tab-btn" onclick="showTab('consulta',this)">🔍 Consulta</button>
+  </div>
+</div>
+
+<div class="content">
+
+  <!-- ── PARTICIPANTES ── -->
+  <div id="panel-participantes" class="panel active">
+    <div class="notice info">👆 Toca tu nombre para seleccionarte y poder ingresar predicciones. Si es tu primera vez, edita uno de los espacios vacíos con tu nombre.</div>
+    <div class="card">
+      <div class="card-hdr">👥 Participantes <span id="pts-live" style="font-size:.72rem;opacity:.6"></span></div>
+      <div class="card-body">
+        <div class="part-grid" id="part-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PREDICCIONES ── -->
+  <div id="panel-predicciones" class="panel">
+    <div id="no-user-warn" class="notice warn" style="display:none">⚠️ Primero selecciona tu nombre en la pestaña 👥 Participantes.</div>
+    <div id="active-banner" style="display:none"></div>
+
+    <div class="card">
+      <div class="card-hdr">
+        📝 Predicciones
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="btn btn-gn btn-sm" onclick="savePreds()">💾 Guardar</button>
+        </div>
+      </div>
+      <div class="card-body" style="padding:10px">
+        <!-- Filter bar -->
+        <div class="filter-bar">
+          <span class="filter-label">Ver por:</span>
+          <div class="seg">
+            <button class="seg-btn active" id="seg-fecha" onclick="setView('fecha')">📅 Fecha</button>
+            <button class="seg-btn" id="seg-grupo" onclick="setView('grupo')">🔤 Grupo</button>
+          </div>
+          <button class="today-badge" onclick="scrollToToday()">📍 Hoy</button>
+        </div>
+        <div id="pred-table-wrap"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── RESULTADOS ── -->
+  <div id="panel-resultados" class="panel">
+    <div class="card">
+      <div class="card-hdr">
+        ⚽ Resultados oficiales
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="status-bar"><div class="sdot spin" id="sdot"></div><span id="stxt">Cargando...</span></div>
+          <button class="btn btn-gn btn-sm" onclick="fetchResults()">🔄</button>
+        </div>
+      </div>
+      <div class="card-body" style="padding:10px">
+        <div class="filter-bar">
+          <span class="filter-label">Ver por:</span>
+          <div class="seg">
+            <button class="seg-btn active" id="rseg-fecha" onclick="setResView('fecha')">📅 Fecha</button>
+            <button class="seg-btn" id="rseg-grupo" onclick="setResView('grupo')">🔤 Grupo</button>
+          </div>
+          <button class="today-badge" onclick="scrollToTodayRes()">📍 Hoy</button>
+        </div>
+        <div class="notice info">✅ Resultados automáticos desde la API oficial del Mundial.</div>
+        <div id="res-wrap"><div class="loader">⏳ Cargando partidos...</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TABLA ── -->
+  <div id="panel-tabla" class="panel">
+    <div class="card">
+      <div class="card-hdr">🏅 Tabla de posiciones</div>
+      <div class="card-body" id="tabla-body"><div class="loader">⏳ Calculando...</div></div>
+    </div>
+  </div>
+
+  <!-- ── CONSULTA ── -->
+  <div id="panel-consulta" class="panel">
+    <div class="card">
+      <div class="card-hdr">🔍 Consulta de partido</div>
+      <div class="card-body">
+        <select class="lsel" id="lsel" onchange="renderLookup()"></select>
+        <div id="lookup-body"></div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /content -->
+
+<!-- BOTTOM NAV -->
+<div class="bnav">
+  <button class="bnav-btn active" onclick="showTab('participantes',this,true)"><span class="bnav-ico">👥</span>Jugadores</button>
+  <button class="bnav-btn" onclick="showTab('predicciones',this,true)"><span class="bnav-ico">📝</span>Mis pred.</button>
+  <button class="bnav-btn" onclick="showTab('resultados',this,true)"><span class="bnav-ico">⚽</span>Resultados</button>
+  <button class="bnav-btn" onclick="showTab('tabla',this,true)"><span class="bnav-ico">🏅</span>Tabla</button>
+  <button class="bnav-btn" onclick="showTab('consulta',this,true)"><span class="bnav-ico">🔍</span>Consulta</button>
+</div>
+
+<div id="toast">✅ Guardado</div>
+
+<script>
+// ══ STORAGE ══
+async function stGet(k,s=false){try{return await window.storage.get(k,s)}catch(e){return null}}
+async function stSet(k,v,s=false){try{return await window.storage.set(k,typeof v==='string'?v:JSON.stringify(v),s)}catch(e){return null}}
+async function stDel(k,s=false){try{return await window.storage.delete(k,s)}catch(e){return null}}
+async function stList(p,s=false){try{return await window.storage.list(p,s)}catch(e){return null}}
+
+// ══ TEAMS ══
+const T={
+  'Mexico':{es:'México',cc:'mx'},'South Africa':{es:'Sudáfrica',cc:'za'},
+  'South Korea':{es:'Corea del Sur',cc:'kr'},'Czech Republic':{es:'Chequia',cc:'cz'},
+  'Canada':{es:'Canadá',cc:'ca'},'Bosnia & Herzegovina':{es:'Bosnia y Herz.',cc:'ba'},
+  'Qatar':{es:'Qatar',cc:'qa'},'Switzerland':{es:'Suiza',cc:'ch'},
+  'Brazil':{es:'Brasil',cc:'br'},'Morocco':{es:'Marruecos',cc:'ma'},
+  'Haiti':{es:'Haití',cc:'ht'},'Scotland':{es:'Escocia',cc:'gb-sct'},
+  'USA':{es:'Estados Unidos',cc:'us'},'Paraguay':{es:'Paraguay',cc:'py'},
+  'Australia':{es:'Australia',cc:'au'},'Turkey':{es:'Turquía',cc:'tr'},
+  'Germany':{es:'Alemania',cc:'de'},'Curaçao':{es:'Curazao',cc:'cw'},
+  'Ivory Coast':{es:'Costa de Marfil',cc:'ci'},'Ecuador':{es:'Ecuador',cc:'ec'},
+  'Netherlands':{es:'Países Bajos',cc:'nl'},'Japan':{es:'Japón',cc:'jp'},
+  'Sweden':{es:'Suecia',cc:'se'},'Tunisia':{es:'Túnez',cc:'tn'},
+  'Belgium':{es:'Bélgica',cc:'be'},'Egypt':{es:'Egipto',cc:'eg'},
+  'Iran':{es:'Irán',cc:'ir'},'New Zealand':{es:'Nueva Zelanda',cc:'nz'},
+  'Spain':{es:'España',cc:'es'},'Cape Verde':{es:'Cabo Verde',cc:'cv'},
+  'Saudi Arabia':{es:'Arabia Saudita',cc:'sa'},'Uruguay':{es:'Uruguay',cc:'uy'},
+  'France':{es:'Francia',cc:'fr'},'Senegal':{es:'Senegal',cc:'sn'},
+  'Norway':{es:'Noruega',cc:'no'},'Iraq':{es:'Iraq',cc:'iq'},
+  'Argentina':{es:'Argentina',cc:'ar'},'Algeria':{es:'Argelia',cc:'dz'},
+  'Austria':{es:'Austria',cc:'at'},'Jordan':{es:'Jordania',cc:'jo'},
+  'Ghana':{es:'Ghana',cc:'gh'},'Panama':{es:'Panamá',cc:'pa'},
+  'England':{es:'Inglaterra',cc:'gb-eng'},'Croatia':{es:'Croacia',cc:'hr'},
+  'Portugal':{es:'Portugal',cc:'pt'},'DR Congo':{es:'DR Congo',cc:'cd'},
+  'Uzbekistan':{es:'Uzbekistán',cc:'uz'},'Colombia':{es:'Colombia',cc:'co'},
+};
+const ti=n=>T[n]||{es:n,cc:''};
+const flag=(cc,s=20)=>{
+  if(!cc||cc.includes('-'))return '';
+  return `<img src="https://flagcdn.com/w${s}/${cc}.png" class="tflag" alt="" onerror="this.style.display='none'">`;
+};
+
+// ══ STATE ══
+const MAX_PLAYERS = 8;
+// players[i] = {name, key} or null
+let players = Array(MAX_PLAYERS).fill(null);
+let CU_IDX = null; // current user index
+let MATCHES = [];
+let allPreds = {}; // {playerKey: {matchIdx: {local,visit,penL,penV}}}
+let viewMode = 'fecha';   // 'fecha' | 'grupo'
+let resViewMode = 'fecha';
+let currentTab = 'participantes';
+
+function pKey(idx){ return `preds_slot${idx}`; }
+function pNameKey(idx){ return `name_slot${idx}`; }
+
+// ══ INIT ══
+async function init(){
+  await loadPlayers();
+  await loadAllPreds();
+  await fetchResults();
+  renderParticipants();
+  buildLookupSelect();
+}
+
+async function loadPlayers(){
+  for(let i=0;i<MAX_PLAYERS;i++){
+    const r=await stGet(pNameKey(i),true);
+    if(r){
+      try{
+        const data=JSON.parse(r.value);
+        players[i]={name:data.name||data, key:`slot${i}`};
+      }catch(e){ players[i]={name:r.value,key:`slot${i}`}; }
+    }
+  }
+  // Try to restore last selected player from localStorage
+  try{
+    const saved=localStorage.getItem('polla_me');
+    if(saved!=null){ const idx=parseInt(saved); if(idx>=0&&idx<MAX_PLAYERS&&players[idx]) CU_IDX=idx; }
+  }catch(e){}
+}
+
+async function loadAllPreds(){
+  for(let i=0;i<MAX_PLAYERS;i++){
+    const r=await stGet(pKey(i),true);
+    if(r){ try{ allPreds[`slot${i}`]=JSON.parse(r.value); }catch(e){ allPreds[`slot${i}`]={}; } }
+    else allPreds[`slot${i}`]={};
+  }
+}
+
+function myPreds(){ return CU_IDX!==null ? (allPreds[`slot${CU_IDX}`]||{}) : {}; }
+
+// ══ TABS ══
+function showTab(name,btn,mobile=false){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('panel-'+name).classList.add('active');
+  currentTab=name;
+  if(mobile){document.querySelectorAll('.bnav-btn').forEach(b=>b.classList.remove('active'));}
+  else{document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));}
+  if(btn)btn.classList.add('active');
+  if(name==='predicciones') renderPredictions();
+  if(name==='tabla') renderTabla();
+  if(name==='consulta') renderLookup();
+  if(name==='resultados') renderResults();
+  if(name==='participantes') renderParticipants();
+}
+
+// ══ PARTICIPANTS ══
+function renderParticipants(){
+  const grid=document.getElementById('part-grid');
+  let html='';
+  for(let i=0;i<MAX_PLAYERS;i++){
+    const p=players[i];
+    const isMe=(CU_IDX===i);
+    const bd = p ? getBreakdown(allPreds[`slot${i}`]||{}) : null;
+    if(p){
+      html+=`<div class="part-card${isMe?' me':''}" onclick="selectPlayer(${i})">
+        <div class="part-avatar">${p.name[0].toUpperCase()}</div>
+        <div class="part-name">${p.name}</div>
+        <div class="part-pts">${bd?bd.total+' pts':'0 pts'}</div>
+        ${isMe?'<span class="you-badge">✓ Soy yo</span>':''}
+      </div>`;
+    } else {
+      html+=`<div class="part-card empty" onclick="addPlayer(${i})">
+        <div class="part-avatar" style="background:var(--gl);color:var(--mt);font-size:1.5rem">+</div>
+        <div class="part-name" style="color:var(--mt);font-weight:400">Libre</div>
+        <div class="part-pts">Toca para agregar</div>
+      </div>`;
+    }
+  }
+  grid.innerHTML=html;
+  document.getElementById('pts-live').textContent=
+    MATCHES.filter(m=>m.score?.ft?.[0]!=null).length+' partidos jugados';
+}
+
+function selectPlayer(idx){
+  CU_IDX=idx;
+  try{localStorage.setItem('polla_me',idx);}catch(e){}
+  renderParticipants();
+  showToast(`✅ Entraste como ${players[idx].name}`);
+  // Go to predictions
+  showTab('predicciones', document.querySelectorAll('.tab-btn')[1]);
+  document.querySelectorAll('.bnav-btn')[1].classList.add('active');
+  document.querySelectorAll('.bnav-btn')[0].classList.remove('active');
+}
+
+async function addPlayer(idx){
+  const name=prompt(`Nombre para el espacio ${idx+1}:`);
+  if(!name||!name.trim())return;
+  const n=name.trim();
+  players[idx]={name:n, key:`slot${idx}`};
+  await stSet(pNameKey(idx),{name:n},true);
+  selectPlayer(idx);
+  renderParticipants();
+}
+
+// ══ PREDICTIONS ══
+function setView(v){
+  viewMode=v;
+  document.getElementById('seg-fecha').classList.toggle('active',v==='fecha');
+  document.getElementById('seg-grupo').classList.toggle('active',v==='grupo');
+  renderPredictions();
+}
+
+function renderPredictions(){
+  const nb=document.getElementById('no-user-warn');
+  const ab=document.getElementById('active-banner');
+
+  if(CU_IDX===null||!players[CU_IDX]){
+    nb.style.display='block';ab.style.display='none';
+    document.getElementById('pred-table-wrap').innerHTML='';
+    return;
+  }
+  nb.style.display='none';
+  const p=players[CU_IDX];
+  const bd=getBreakdown(myPreds());
+  ab.style.display='flex';
+  ab.className='active-banner';
+  ab.innerHTML=`<div class="ava">${p.name[0].toUpperCase()}</div>
+    <div class="info"><div class="nm">${p.name}</div>
+    <div class="sub">${bd.total} pts · ${bd.played} partidos llenados · ${MATCHES.filter(m=>m.score?.ft?.[0]!=null).length} jugados</div></div>
+    <button class="btn-change" onclick="showTab('participantes',document.querySelectorAll('.tab-btn')[0])">Cambiar</button>`;
+
+  if(!MATCHES.length){
+    document.getElementById('pred-table-wrap').innerHTML='<div class="empty">⏳ Cargando partidos...</div>';
+    return;
+  }
+
+  const wrap=document.getElementById('pred-table-wrap');
+  // col headers
+  let html=`<div class="col-hdr">
+    <span>#</span><span>Fecha</span>
+    <span class="ch-team" style="text-align:right">Local</span>
+    <span>Score</span>
+    <span class="ch-away">Visitante</span>
+    <span>G.L</span><span>G.V</span>
+    <span class="ch-pen">🟠L</span><span class="ch-pen">🟠V</span>
+    <span>Pts</span>
+  </div>`;
+
+  if(viewMode==='fecha'){
+    html+=buildMatchesHTML(groupByDate(MATCHES),true);
+  } else {
+    html+=buildMatchesHTML(groupByGroup(MATCHES),false);
+  }
+  wrap.innerHTML=html;
+}
+
+function groupByDate(matches){
+  const g={};
+  matches.forEach((m,i)=>{
+    const d=m.date||'Sin fecha';
+    if(!g[d])g[d]=[];
+    g[d].push({...m,idx:i});
+  });
+  return g;
+}
+
+function groupByGroup(matches){
+  const g={};
+  matches.forEach((m,i)=>{
+    const grp=m.group||m.round||'Eliminatoria';
+    if(!g[grp])g[grp]=[];
+    g[grp].push({...m,idx:i});
+  });
+  return g;
+}
+
+const TODAY=new Date().toISOString().slice(0,10);
+
+function buildMatchesHTML(groups, isDate){
+  let html='';
+  Object.entries(groups).forEach(([label,ms])=>{
+    const isToday=isDate&&(label===TODAY);
+    const displayLabel=isDate ? formatDate(label,isToday) : label;
+    const hdrid=isDate?`date-${label}`:`grp-${label.replace(/\s/g,'-')}`;
+
+    if(isDate){
+      html+=`<div class="date-block"><div class="date-hdr${isToday?' today-hdr':''}" id="${hdrid}">
+        ${isToday?'📍 HOY — ':''}${displayLabel}
+        ${isToday?`<span class="today-badge" style="background:rgba(255,255,255,.2)">Hoy</span>`:''}
+      </div>`;
+    } else {
+      html+=`<div class="group-hdr" id="${hdrid}">${displayLabel}</div>`;
+    }
+
+    ms.forEach(m=>{
+      const t1=ti(m.team1),t2=ti(m.team2);
+      const pred=myPreds()[m.idx]||{};
+      const hs=m.score?.ft?.[0]!=null;
+      const s1=hs?m.score.ft[0]:'',s2=hs?m.score.ft[1]:'';
+      const pts=(hs&&pred.local!=null&&pred.local!=='')? calcPts(m,pred):null;
+      const pCl=pts===null?'':pts>=10?'pc12':pts>=6?'pc6':pts>0?'pcp':'pc0';
+      const isKO=(m.round||'').match(/round|quarter|semi|final/i);
+      const f1=flag(t1.cc)||'',f2=flag(t2.cc)||'';
+      const rowCl=hs?'played':m.date===TODAY?'today':'';
+
+      html+=`<div class="mrow ${rowCl}">
+        <div class="mn">${m.idx+1}</div>
+        <div class="mdate">${(m.date||'').slice(5).replace('-','/')}<br><span class="mtime">${(m.time||'').replace(/ UTC.*/,'')}</span></div>
+        <div class="team home">${t1.es} ${f1}</div>
+        <div class="score-box">
+          <input class="score-num${hs?' filled':''}" type="text" value="${s1}" readonly>
+          <span class="score-dash">-</span>
+          <input class="score-num${hs?' filled':''}" type="text" value="${s2}" readonly>
+        </div>
+        <div class="team">${f2} ${t2.es}</div>
+        <input class="pred-inp" type="number" min="0" max="99" value="${pred.local??''}" placeholder="—" oninput="setPred(${m.idx},'local',this.value)">
+        <input class="pred-inp" type="number" min="0" max="99" value="${pred.visit??''}" placeholder="—" oninput="setPred(${m.idx},'visit',this.value)">
+        <input class="pred-inp pen" type="number" min="0" max="99" ${!isKO?'disabled':''} value="${pred.penL??''}" placeholder="—" oninput="setPred(${m.idx},'penL',this.value)">
+        <input class="pred-inp pen" type="number" min="0" max="99" ${!isKO?'disabled':''} value="${pred.penV??''}" placeholder="—" oninput="setPred(${m.idx},'penV',this.value)">
+        <div class="pts-cell ${pCl}">${pts!==null?pts:'—'}</div>
+      </div>`;
+    });
+
+    if(isDate) html+='</div>';
+  });
+  return html;
+}
+
+function formatDate(d, isToday){
+  if(!d||d==='Sin fecha')return d;
+  try{
+    const dt=new Date(d+'T12:00:00');
+    const opts={weekday:'long',day:'numeric',month:'long'};
+    const str=dt.toLocaleDateString('es-CO',opts);
+    return str.charAt(0).toUpperCase()+str.slice(1);
+  }catch(e){return d;}
+}
+
+function scrollToToday(){
+  const el=document.getElementById(`date-${TODAY}`);
+  if(el)el.scrollIntoView({behavior:'smooth',block:'start'});
+  else showToast('No hay partidos hoy');
+}
+
+function setPred(idx,field,val){
+  if(CU_IDX===null)return;
+  const key=`slot${CU_IDX}`;
+  if(!allPreds[key])allPreds[key]={};
+  if(!allPreds[key][idx])allPreds[key][idx]={};
+  allPreds[key][idx][field]=val===''?'':parseInt(val);
+  clearTimeout(window._st);
+  window._st=setTimeout(()=>savePreds(true),1200);
+}
+
+async function savePreds(silent=false){
+  if(CU_IDX===null){showToast('⚠️ Selecciona tu nombre primero');return;}
+  await stSet(pKey(CU_IDX),allPreds[`slot${CU_IDX}`],true);
+  if(!silent)showToast('✅ Predicciones guardadas');
+}
+
+// ══ RESULTS TAB ══
+function setResView(v){
+  resViewMode=v;
+  document.getElementById('rseg-fecha').classList.toggle('active',v==='fecha');
+  document.getElementById('rseg-grupo').classList.toggle('active',v==='grupo');
+  renderResults();
+}
+
+function scrollToTodayRes(){
+  const el=document.getElementById(`res-date-${TODAY}`);
+  if(el)el.scrollIntoView({behavior:'smooth',block:'start'});
+  else showToast('No hay partidos hoy');
+}
+
+function renderResults(){
+  const wrap=document.getElementById('res-wrap');
+  if(!MATCHES.length){wrap.innerHTML='<div class="loader">⏳ Cargando...</div>';return;}
+
+  const groups=resViewMode==='fecha'?groupByDate(MATCHES):groupByGroup(MATCHES);
+  let html='';
+  Object.entries(groups).forEach(([label,ms])=>{
+    const isDate=resViewMode==='fecha';
+    const isToday=isDate&&(label===TODAY);
+    const displayLabel=isDate?formatDate(label,isToday):label;
+    const hdrid=isDate?`res-date-${label}`:`res-grp-${label.replace(/\s/g,'-')}`;
+
+    if(isDate){
+      html+=`<div class="date-block"><div class="date-hdr${isToday?' today-hdr':''}" id="${hdrid}">
+        ${isToday?'📍 HOY — ':''}${displayLabel}
+      </div>`;
+    } else {
+      html+=`<div class="group-hdr" id="${hdrid}">${displayLabel}</div>`;
+    }
+
+    // Simple results display
+    ms.forEach(m=>{
+      const t1=ti(m.team1),t2=ti(m.team2);
+      const hs=m.score?.ft?.[0]!=null;
+      const s1=hs?m.score.ft[0]:'—',s2=hs?m.score.ft[1]:'—';
+      const f1=flag(t1.cc)||'',f2=flag(t2.cc)||'';
+      html+=`<div class="mrow${hs?' played':''}${m.date===TODAY?' today':''}">
+        <div class="mn">${m.idx!=null?m.idx+1:''}</div>
+        <div class="mdate">${(m.date||'').slice(5).replace('-','/')}<br><span class="mtime">${(m.time||'').replace(/ UTC.*/,'')}</span></div>
+        <div class="team home">${t1.es} ${f1}</div>
+        <div class="score-box">
+          <span class="score-num${hs?' filled':''}" style="display:flex;align-items:center;justify-content:center">${s1}</span>
+          <span class="score-dash">-</span>
+          <span class="score-num${hs?' filled':''}" style="display:flex;align-items:center;justify-content:center">${s2}</span>
+        </div>
+        <div class="team">${f2} ${t2.es}</div>
+        <div></div><div></div><div></div><div></div><div></div>
+      </div>`;
+    });
+    if(isDate) html+='</div>';
+  });
+  wrap.innerHTML=html;
+}
+
+// ══ FETCH ══
+async function fetchResults(){
+  const dot=document.getElementById('sdot'),stxt=document.getElementById('stxt');
+  if(dot){dot.className='sdot spin';stxt.textContent='Actualizando...';}
+  try{
+    const res=await fetch('https://raw.githubusercontent.com/openfootball/world-cup.json/master/2026/worldcup.json',{cache:'no-cache'});
+    const data=await res.json();
+    // Add idx and parse group info
+    MATCHES=(data.matches||[]).map((m,i)=>({...m,idx:i}));
+    // Infer group from round
+    MATCHES.forEach(m=>{
+      if((m.round||'').match(/matchday/i)){
+        // group from team data - we'll use round as group label
+        m.group=m.round;
+      }
+    });
+    const played=MATCHES.filter(m=>m.score?.ft?.[0]!=null).length;
+    const now=new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
+    if(dot){dot.className='sdot';stxt.textContent=`${now} · ${played} resultados`;}
+    renderResults();
+    renderParticipants();
+    buildLookupSelect();
+    if(currentTab==='predicciones')renderPredictions();
+  }catch(e){
+    if(dot){dot.className='sdot spin';stxt.textContent='⚠️ Sin conexión';}
+  }
+}
+
+// ══ POINTS ══
+function calcPts(match,pred){
+  const ft=match.score?.ft;
+  if(!ft||ft[0]==null)return null;
+  if(pred.local===''||pred.local==null)return null;
+  if(pred.visit===''||pred.visit==null)return null;
+  const rl=ft[0],ra=ft[1],pl=parseInt(pred.local),pv=parseInt(pred.visit);
+  if(isNaN(pl)||isNaN(pv))return null;
+  let rd=rl>ra?1:rl<ra?-1:0;
+  if(rd===0){const p=match.score?.p;if(p&&p[0]!=null)rd=p[0]>p[1]?1:-1;}
+  const pd=pl>pv?1:pl<pv?-1:0;
+  let pts=rd===pd?6:0;
+  if(pl===rl&&pv===ra)pts+=4;
+  else if(pl===rl||pv===ra)pts+=2;
+  const pen=match.score?.p;
+  if(pen&&pen[0]!=null&&pred.penL!=null&&pred.penL!==''){
+    const pp1=parseInt(pred.penL),pp2=parseInt(pred.penV);
+    if(!isNaN(pp1)&&!isNaN(pp2)){
+      if(pp1===pen[0]&&pp2===pen[1])pts+=2;
+      else if(pp1===pen[0]||pp2===pen[1])pts+=1;
+    }
+  }
+  return pts;
+}
+
+function getBreakdown(preds){
+  let res=0,both=0,one=0,played=0;
+  MATCHES.forEach((m,i)=>{
+    const pred=preds[i];
+    if(!pred||pred.local===''||pred.local==null)return;
+    const ft=m.score?.ft;
+    if(!ft||ft[0]==null)return;
+    const pts=calcPts(m,pred);
+    if(pts===null)return;
+    played++;
+    const rl=ft[0],ra=ft[1],pl=parseInt(pred.local),pv=parseInt(pred.visit);
+    let rd=rl>ra?1:rl<ra?-1:0;
+    if(rd===0){const p=m.score?.p;if(p&&p[0]!=null)rd=p[0]>p[1]?1:-1;}
+    const pd=pl>pv?1:pl<pv?-1:0;
+    if(rd===pd)res+=6;
+    if(pl===rl&&pv===ra)both+=4;
+    else if(pl===rl||pv===ra)one+=2;
+  });
+  return{res,both,one,played,total:res+both+one};
+}
+
+// ══ TABLA ══
+async function renderTabla(){
+  const c=document.getElementById('tabla-body');
+  c.innerHTML='<div class="loader">⏳ Calculando...</div>';
+  await loadAllPreds();
+  const rows=[];
+  for(let i=0;i<MAX_PLAYERS;i++){
+    if(!players[i])continue;
+    const bd=getBreakdown(allPreds[`slot${i}`]||{});
+    rows.push({i,name:players[i].name,bd});
+  }
+  rows.sort((a,b)=>b.bd.total-a.bd.total||b.bd.both-a.bd.both);
+  const played=MATCHES.filter(m=>m.score?.ft?.[0]!=null).length;
+  const medals=['🥇','🥈','🥉'];
+  let html=`<table class="rank-table"><thead><tr>
+    <th>Pos.</th><th>Participante</th><th>Total</th>
+    <th><span class="rbadge bb">Resultado</span></th>
+    <th><span class="rbadge bg">Ambos goles</span></th>
+    <th><span class="rbadge ba">Un gol</span></th>
+    <th>Jugados</th>
+  </tr></thead><tbody>`;
+  rows.forEach((r,pos)=>{
+    const medal=pos<3?medals[pos]:pos+1;
+    const pc=pos===0?'r1':pos===1?'r2':pos===2?'r3':'';
+    const isMe=r.i===CU_IDX;
+    html+=`<tr class="${isMe?'me-row':''}">
+      <td><span class="rpos ${pc}">${medal}</span></td>
+      <td><span class="rname">${r.name}${isMe?' <span style="font-size:.65rem;color:var(--bl)">(yo)</span>':''}</span></td>
+      <td><span class="rpts">${r.bd.total}</span></td>
+      <td><span class="rbadge bb">${r.bd.res}</span></td>
+      <td><span class="rbadge bg">${r.bd.both}</span></td>
+      <td><span class="rbadge ba">${r.bd.one}</span></td>
+      <td style="font-size:.75rem;color:var(--mt)">${r.bd.played}/${played}</td>
+    </tr>`;
+  });
+  if(!rows.length) html+='<tr><td colspan="7" class="empty">Agrega participantes primero.</td></tr>';
+  html+='</tbody></table>';
+  c.innerHTML=html;
+}
+
+// ══ CONSULTA ══
+function buildLookupSelect(){
+  const sel=document.getElementById('lsel');
+  if(!sel||!MATCHES.length)return;
+  const cur=sel.value;
+  sel.innerHTML='';
+  MATCHES.forEach((m,i)=>{
+    const t1=ti(m.team1),t2=ti(m.team2);
+    const d=(m.date||'').slice(5).replace('-','/');
+    const hs=m.score?.ft?.[0]!=null;
+    const opt=document.createElement('option');
+    opt.value=i;
+    opt.textContent=`${i+1}. ${d} · ${t1.es} vs ${t2.es}${hs?' ✅':''}`;
+    sel.appendChild(opt);
+  });
+  if(cur)sel.value=cur;
+}
+
+async function renderLookup(){
+  const sel=document.getElementById('lsel');
+  if(!sel||!MATCHES.length)return;
+  const mIdx=parseInt(sel.value);
+  const m=MATCHES[mIdx];
+  if(!m)return;
+  const t1=ti(m.team1),t2=ti(m.team2);
+  const hs=m.score?.ft?.[0]!=null;
+  const s1=hs?m.score.ft[0]:'?',s2=hs?m.score.ft[1]:'?';
+  const f1=flag(t1.cc,26)||'',f2=flag(t2.cc,26)||'';
+  const d=(m.date||'').slice(5).replace('-','/');
+
+  let html=`<div class="match-banner">
+    <div class="bn-teams">${f1} ${t1.es}<span class="bn-score">${s1} - ${s2}</span>${t2.es} ${f2}</div>
+    <div class="bn-meta">${m.round||''} · ${d} · ${m.ground||''}</div>
+    ${hs?'<div style="color:var(--ac);font-weight:800;font-size:.8rem;margin-top:5px">✅ Resultado final</div>':'<div style="color:rgba(255,255,255,.3);font-size:.76rem;margin-top:4px">⏳ Sin resultado todavía</div>'}
+  </div>`;
+
+  // Header showing team names
+  html+=`<div style="display:grid;grid-template-columns:26px 1fr 60px 60px 44px;gap:8px;padding:8px;background:var(--dk);border-radius:6px 6px 0 0;font-size:.65rem;font-weight:800;color:rgba(255,255,255,.55)">
+    <div>#</div><div>Participante</div>
+    <div style="text-align:center">${f1} ${t1.es.split(' ')[0]}</div>
+    <div style="text-align:center">${f2} ${t2.es.split(' ')[0]}</div>
+    <div style="text-align:center;color:var(--ac)">Pts</div>
+  </div>`;
+
+  await loadAllPreds();
+  let anyPlayer=false;
+  for(let i=0;i<MAX_PLAYERS;i++){
+    if(!players[i])continue;
+    anyPlayer=true;
+    const pred=(allPreds[`slot${i}`]||{})[mIdx]||{};
+    const hasPred=pred.local!=null&&pred.local!=='';
+    const pts=hasPred&&hs?calcPts(m,pred):null;
+    const ok=pts!=null&&pts>=6;
+    const pCl=pts==null?'':pts>=10?'h':pts>=6?'h':pts>0?'m':'z';
+    const isMe=i===CU_IDX;
+    html+=`<div class="lu-row${pts!=null?(ok?' ok':' ng'):''}">
+      <div class="lu-num">${i+1}</div>
+      <div class="lu-name">${players[i].name}${isMe?' <span style="font-size:.62rem;color:var(--bl)">(yo)</span>':''}</div>
+      <div class="lu-pred" style="text-align:center">${hasPred?pred.local:'<span style="color:var(--mt);font-size:.72rem">—</span>'}</div>
+      <div class="lu-pred" style="text-align:center">${hasPred?pred.visit:'<span style="color:var(--mt);font-size:.72rem">—</span>'}</div>
+      <div class="lu-pts ${pCl}">${pts!=null?pts+'p':'—'}</div>
+    </div>`;
+  }
+  if(!anyPlayer) html+='<div class="empty">Agrega participantes primero.</div>';
+
+  document.getElementById('lookup-body').innerHTML=html;
+}
+
+// ══ TOAST ══
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2200);
+}
+
+// ══ START ══
+init();
+</script>
+</body>
+</html>
