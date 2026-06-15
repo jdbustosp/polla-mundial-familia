@@ -93,11 +93,12 @@ body.profile-mode .content{max-width:1100px;padding-top:28px;padding-bottom:32px
 .mrow:hover{background:#f8fafc}
 .mrow.played{background:#f0fff4}
 .mrow.today{background:#fffde7}
-/* grid: #(28) date(60) hometeam(1fr) score(auto) awayteam(1fr) predL(38) predV(38) penL(34) penV(34) pts(36) */
+/* grid: #, date, local, prediction, visitor, official result, penalties, points */
 .mrow{grid-template-columns:26px 58px 1fr auto 1fr 38px 38px 34px 34px 38px}
 .mn{font-size:.65rem;color:var(--mt);font-weight:700;text-align:center}
 .mdate{font-size:.66rem;color:var(--mt);line-height:1.3}
 .mtime{font-size:.6rem;color:var(--bl);font-weight:600}
+.tz-label{font-size:.52rem;color:var(--mt);font-weight:800;margin-left:2px}
 .team{font-size:.8rem;font-weight:700;display:flex;align-items:center;gap:4px}
 .team.home{justify-content:flex-end}
 .tflag{width:18px;height:13px;border-radius:1px;object-fit:cover;flex-shrink:0}
@@ -105,13 +106,18 @@ body.profile-mode .content{max-width:1100px;padding-top:28px;padding-bottom:32px
 .score-num{width:26px;height:26px;border-radius:4px;border:2px solid var(--gl);text-align:center;font-size:.85rem;font-weight:700;background:var(--wh);color:var(--tx)}
 .score-num.filled{background:#e8f5e9;border-color:var(--gn);color:var(--gn)}
 .score-dash{color:var(--mt);font-weight:700;font-size:.8rem}
-.pred-inp{width:34px;height:30px;border-radius:5px;border:2px solid #e5e7eb;text-align:center;font-size:.88rem;font-weight:700;background:#fffde7;outline:none;transition:border-color .18s}
-.pred-inp:focus{border-color:var(--ac)}
-.mrow.played .pred-inp:not(:disabled){background:#fff8cf;border-color:#dfc65b;color:var(--dk)}
+.pred-inp{width:28px;height:28px;border-radius:4px;border:2px solid #dce4ee;text-align:center;font-size:.88rem;font-weight:800;background:var(--wh);color:var(--tx);outline:none;transition:border-color .18s,box-shadow .18s}
+.pred-inp:focus{border-color:var(--bl);box-shadow:0 0 0 2px rgba(26,75,140,.14)}
 .pred-inp.pen{background:#fff3e0;border-color:#fcd29a}
 .pred-inp:disabled{background:#f3f4f6;opacity:.45;cursor:not-allowed}
+.official-cell{width:32px;height:28px;border-radius:5px;border:2px solid var(--gl);display:flex;align-items:center;justify-content:center;background:#f8fafc;color:var(--mt);font-size:.82rem;font-weight:800}
+.official-cell.filled{background:#e8f5e9;border-color:var(--gn);color:var(--gn)}
 .pts-cell{font-weight:800;font-size:.88rem;text-align:center}
 .pc12{color:#0f5e2e}.pc6{color:var(--gn)}.pcp{color:var(--or)}.pc0{color:var(--rd)}
+.matches-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-inline:contain;touch-action:pan-x pan-y;padding-bottom:4px}
+.matches-table{min-width:760px}
+.matches-scroll::-webkit-scrollbar{height:7px}
+.matches-scroll::-webkit-scrollbar-thumb{background:#b9c5d4;border-radius:8px}
 
 /* col headers */
 .col-hdr{display:grid;grid-template-columns:26px 58px 1fr auto 1fr 38px 38px 34px 34px 38px;gap:4px;padding:6px 6px;background:#f1f5f9;border-bottom:2px solid var(--gl)}
@@ -187,8 +193,7 @@ body.profile-mode .content{max-width:1100px;padding-top:28px;padding-bottom:32px
   .part-info{padding:10px}
   .part-name{font-size:.87rem}
   .part-enter{display:none}
-  .mrow,.col-hdr{grid-template-columns:22px 46px 1fr auto 1fr 34px 34px 0px 0px 34px}
-  .pred-inp.pen,.col-hdr .ch-pen{display:none}
+  .matches-table{min-width:760px}
   .team{font-size:.74rem}
 }
 </style>
@@ -536,13 +541,13 @@ function renderPredictions(){
   }
 
   const wrap=document.getElementById('pred-table-wrap');
-  // col headers
-  let html=`<div class="col-hdr">
+  // The table remains wide on mobile so it can be dragged horizontally.
+  let html=`<div class="matches-scroll"><div class="matches-table"><div class="col-hdr">
     <span>#</span><span>Fecha</span>
     <span class="ch-team" style="text-align:right">Local</span>
-    <span>Score</span>
+    <span>Tu marcador</span>
     <span class="ch-away">Visitante</span>
-    <span>Tu L.</span><span>Tu V.</span>
+    <span>R.L.</span><span>R.V.</span>
     <span class="ch-pen">🟠L</span><span class="ch-pen">🟠V</span>
     <span>Pts</span>
   </div>`;
@@ -555,25 +560,49 @@ function renderPredictions(){
     html+=`<div class="group-hdr">${groupLabel(selectedGroup)} · partidos en orden cronológico</div>`;
     html+=buildMatchesHTML(groupByDate(matches),true);
   }
-  wrap.innerHTML=html;
+  wrap.innerHTML=html+'</div></div>';
+}
+
+function bogotaDateParts(date){
+  const parts=new Intl.DateTimeFormat('en-US',{
+    timeZone:'America/Bogota',year:'numeric',month:'2-digit',day:'2-digit',
+    hour:'2-digit',minute:'2-digit',hourCycle:'h23'
+  }).formatToParts(date);
+  return Object.fromEntries(parts.map(p=>[p.type,p.value]));
+}
+
+function matchColombiaInfo(match){
+  const rawTime=String(match.time||'00:00 UTC+0');
+  const parsed=rawTime.match(/^(\d{1,2}):(\d{2})(?:\s+UTC([+-]\d{1,2}))?/i);
+  const dateParts=String(match.date||'').split('-').map(Number);
+  if(!parsed||dateParts.length!==3||dateParts.some(Number.isNaN)){
+    return{date:match.date||'Sin fecha',time:rawTime.replace(/ UTC.*/i,''),timestamp:Number.MAX_SAFE_INTEGER};
+  }
+  const [,hour,minute,offsetText]=parsed;
+  const offset=Number(offsetText||0);
+  const instant=new Date(Date.UTC(dateParts[0],dateParts[1]-1,dateParts[2],Number(hour)-offset,Number(minute)));
+  const co=bogotaDateParts(instant);
+  return{
+    date:`${co.year}-${co.month}-${co.day}`,
+    time:`${co.hour}:${co.minute}`,
+    timestamp:instant.getTime()
+  };
 }
 
 function matchTimestamp(match){
-  const date=match.date||'9999-12-31';
-  const time=(match.time||'23:59').slice(0,5).padStart(5,'0');
-  return `${date}T${time}`;
+  return matchColombiaInfo(match).timestamp;
 }
 
 function sortMatches(matches){
   return [...matches].sort((a,b)=>
-    matchTimestamp(a).localeCompare(matchTimestamp(b))||(a.idx??0)-(b.idx??0)
+    matchTimestamp(a)-matchTimestamp(b)||(a.idx??0)-(b.idx??0)
   );
 }
 
 function groupByDate(matches){
   const g={};
   sortMatches(matches).forEach((m,i)=>{
-    const d=m.date||'Sin fecha';
+    const d=matchColombiaInfo(m).date;
     if(!g[d])g[d]=[];
     g[d].push({...m,idx:m.idx??i});
   });
@@ -590,7 +619,11 @@ function groupByGroup(matches){
   return g;
 }
 
-const TODAY=new Date().toISOString().slice(0,10);
+function bogotaToday(){
+  const now=bogotaDateParts(new Date());
+  return `${now.year}-${now.month}-${now.day}`;
+}
+const TODAY=bogotaToday();
 
 function buildMatchesHTML(groups, isDate){
   let html='';
@@ -611,26 +644,27 @@ function buildMatchesHTML(groups, isDate){
     ms.forEach(m=>{
       const t1=ti(m.team1),t2=ti(m.team2);
       const pred=myPreds()[m.idx]||{};
+      const co=matchColombiaInfo(m);
       const hs=m.score?.ft?.[0]!=null;
       const s1=hs?m.score.ft[0]:'',s2=hs?m.score.ft[1]:'';
       const pts=(hs&&pred.local!=null&&pred.local!=='')? calcPts(m,pred):null;
       const pCl=pts===null?'':pts>=10?'pc12':pts>=6?'pc6':pts>0?'pcp':'pc0';
       const isKO=(m.round||'').match(/round|quarter|semi|final/i);
       const f1=flag(t1.cc)||'',f2=flag(t2.cc)||'';
-      const rowCl=hs?'played':m.date===TODAY?'today':'';
+      const rowCl=hs?'played':co.date===TODAY?'today':'';
 
       html+=`<div class="mrow ${rowCl}">
         <div class="mn">${m.idx+1}</div>
-        <div class="mdate">${(m.date||'').slice(5).replace('-','/')}<br><span class="mtime">${(m.time||'').replace(/ UTC.*/,'')}</span></div>
+        <div class="mdate">${co.date.slice(5).replace('-','/')}<br><span class="mtime">${co.time}</span><span class="tz-label">COL</span></div>
         <div class="team home">${t1.es} ${f1}</div>
         <div class="score-box">
-          <input class="score-num${hs?' filled':''}" type="text" value="${s1}" readonly>
+          <input class="pred-inp" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" value="${pred.local??''}" placeholder="—" aria-label="Predicción de goles de ${t1.es}" oninput="setPred(${m.idx},'local',this)">
           <span class="score-dash">-</span>
-          <input class="score-num${hs?' filled':''}" type="text" value="${s2}" readonly>
+          <input class="pred-inp" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" value="${pred.visit??''}" placeholder="—" aria-label="Predicción de goles de ${t2.es}" oninput="setPred(${m.idx},'visit',this)">
         </div>
         <div class="team">${f2} ${t2.es}</div>
-        <input class="pred-inp" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" value="${pred.local??''}" placeholder="—" aria-label="Predicción de goles de ${t1.es}" oninput="setPred(${m.idx},'local',this)">
-        <input class="pred-inp" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" value="${pred.visit??''}" placeholder="—" aria-label="Predicción de goles de ${t2.es}" oninput="setPred(${m.idx},'visit',this)">
+        <div class="official-cell${hs?' filled':''}">${hs?s1:'—'}</div>
+        <div class="official-cell${hs?' filled':''}">${hs?s2:'—'}</div>
         <input class="pred-inp pen" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" ${!isKO?'disabled':''} value="${pred.penL??''}" placeholder="—" aria-label="Predicción de penales de ${t1.es}" oninput="setPred(${m.idx},'penL',this)">
         <input class="pred-inp pen" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" ${!isKO?'disabled':''} value="${pred.penV??''}" placeholder="—" aria-label="Predicción de penales de ${t2.es}" oninput="setPred(${m.idx},'penV',this)">
         <div class="pts-cell ${pCl}">${pts!==null?pts:'—'}</div>
@@ -666,8 +700,7 @@ function setPred(idx,field,input){
   if(!allPreds[key])allPreds[key]={};
   if(!allPreds[key][idx])allPreds[key][idx]={};
   allPreds[key][idx][field]=clean===''?'':parseInt(clean,10);
-  clearTimeout(window._st);
-  window._st=setTimeout(()=>savePreds(true),1200);
+  stSet(pKey(CU_IDX),allPreds[key],true);
 }
 
 async function savePreds(silent=false){
@@ -695,7 +728,7 @@ function renderResults(){
   if(!MATCHES.length){wrap.innerHTML='<div class="loader">⏳ Cargando...</div>';return;}
 
   const groups=resViewMode==='fecha'?groupByDate(MATCHES):groupByGroup(MATCHES);
-  let html='';
+  let html='<div class="matches-scroll"><div class="matches-table">';
   Object.entries(groups).forEach(([label,ms])=>{
     const isDate=resViewMode==='fecha';
     const isToday=isDate&&(label===TODAY);
@@ -713,12 +746,13 @@ function renderResults(){
     // Simple results display
     ms.forEach(m=>{
       const t1=ti(m.team1),t2=ti(m.team2);
+      const co=matchColombiaInfo(m);
       const hs=m.score?.ft?.[0]!=null;
       const s1=hs?m.score.ft[0]:'—',s2=hs?m.score.ft[1]:'—';
       const f1=flag(t1.cc)||'',f2=flag(t2.cc)||'';
-      html+=`<div class="mrow${hs?' played':''}${m.date===TODAY?' today':''}">
+      html+=`<div class="mrow${hs?' played':''}${co.date===TODAY?' today':''}">
         <div class="mn">${m.idx!=null?m.idx+1:''}</div>
-        <div class="mdate">${(m.date||'').slice(5).replace('-','/')}<br><span class="mtime">${(m.time||'').replace(/ UTC.*/,'')}</span></div>
+        <div class="mdate">${co.date.slice(5).replace('-','/')}<br><span class="mtime">${co.time}</span><span class="tz-label">COL</span></div>
         <div class="team home">${t1.es} ${f1}</div>
         <div class="score-box">
           <span class="score-num${hs?' filled':''}" style="display:flex;align-items:center;justify-content:center">${s1}</span>
@@ -731,7 +765,7 @@ function renderResults(){
     });
     if(isDate) html+='</div>';
   });
-  wrap.innerHTML=html;
+  wrap.innerHTML=html+'</div></div>';
 }
 
 // ══ FETCH ══
