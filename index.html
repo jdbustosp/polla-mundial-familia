@@ -78,6 +78,9 @@ body.profile-mode .content{max-width:1100px;padding-top:28px;padding-bottom:32px
 .seg{display:flex;background:var(--gl);border-radius:8px;padding:2px;gap:2px}
 .seg-btn{padding:6px 13px;border-radius:6px;border:none;background:none;font-size:.78rem;font-weight:700;cursor:pointer;color:var(--mt);transition:all .18s;white-space:nowrap}
 .seg-btn.active{background:var(--dk);color:var(--ac)}
+.group-filter{display:none;align-items:center;gap:6px}
+.group-select{padding:6px 30px 6px 10px;border:2px solid var(--gl);border-radius:7px;background:var(--wh);color:var(--tx);font-size:.78rem;font-weight:700;outline:none;cursor:pointer}
+.group-select:focus{border-color:var(--bl)}
 .today-badge{background:var(--rd);color:#fff;padding:3px 9px;border-radius:12px;font-size:.7rem;font-weight:800}
 
 /* ── MATCHES ── */
@@ -104,6 +107,7 @@ body.profile-mode .content{max-width:1100px;padding-top:28px;padding-bottom:32px
 .score-dash{color:var(--mt);font-weight:700;font-size:.8rem}
 .pred-inp{width:34px;height:30px;border-radius:5px;border:2px solid #e5e7eb;text-align:center;font-size:.88rem;font-weight:700;background:#fffde7;outline:none;transition:border-color .18s}
 .pred-inp:focus{border-color:var(--ac)}
+.mrow.played .pred-inp:not(:disabled){background:#fff8cf;border-color:#dfc65b;color:var(--dk)}
 .pred-inp.pen{background:#fff3e0;border-color:#fcd29a}
 .pred-inp:disabled{background:#f3f4f6;opacity:.45;cursor:not-allowed}
 .pts-cell{font-weight:800;font-size:.88rem;text-align:center}
@@ -237,12 +241,17 @@ body.profile-mode .content{max-width:1100px;padding-top:28px;padding-bottom:32px
         </div>
       </div>
       <div class="card-body" style="padding:10px">
+        <div class="notice info">✏️ Edición temporal habilitada: puedes ingresar o corregir predicciones aunque el partido ya tenga resultado.</div>
         <!-- Filter bar -->
         <div class="filter-bar">
           <span class="filter-label">Ver por:</span>
           <div class="seg">
             <button class="seg-btn active" id="seg-fecha" onclick="setView('fecha')">📅 Fecha</button>
             <button class="seg-btn" id="seg-grupo" onclick="setView('grupo')">🔤 Grupo</button>
+          </div>
+          <div class="group-filter" id="group-filter">
+            <label class="filter-label" for="group-select">Elegir:</label>
+            <select class="group-select" id="group-select" onchange="setGroupFilter(this.value)"></select>
           </div>
           <button class="today-badge" onclick="scrollToToday()">📍 Hoy</button>
         </div>
@@ -376,6 +385,7 @@ let CU_IDX = null; // current user index
 let MATCHES = [];
 let allPreds = {}; // {playerKey: {matchIdx: {local,visit,penL,penV}}}
 let viewMode = 'fecha';   // 'fecha' | 'grupo'
+let selectedGroup = '';
 let resViewMode = 'fecha';
 let currentTab = 'participantes';
 
@@ -467,6 +477,36 @@ function setView(v){
   viewMode=v;
   document.getElementById('seg-fecha').classList.toggle('active',v==='fecha');
   document.getElementById('seg-grupo').classList.toggle('active',v==='grupo');
+  document.getElementById('group-filter').style.display=v==='grupo'?'flex':'none';
+  if(v==='grupo')populateGroupFilter();
+  renderPredictions();
+}
+
+function groupLabel(group){
+  return String(group||'').replace(/^Group\s+/i,'Grupo ');
+}
+
+function availableGroups(){
+  return [...new Set(MATCHES.map(m=>m.group).filter(g=>/^Group\s+[A-L]$/i.test(g)))]
+    .sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
+}
+
+function populateGroupFilter(){
+  const select=document.getElementById('group-select');
+  const groups=availableGroups();
+  if(!groups.length){
+    select.innerHTML='<option value="">Sin grupos disponibles</option>';
+    selectedGroup='';
+    return;
+  }
+  if(!groups.includes(selectedGroup))selectedGroup=groups[0];
+  select.innerHTML=groups.map(group=>
+    `<option value="${group}"${group===selectedGroup?' selected':''}>${groupLabel(group)}</option>`
+  ).join('');
+}
+
+function setGroupFilter(group){
+  selectedGroup=group;
   renderPredictions();
 }
 
@@ -502,7 +542,7 @@ function renderPredictions(){
     <span class="ch-team" style="text-align:right">Local</span>
     <span>Score</span>
     <span class="ch-away">Visitante</span>
-    <span>G.L</span><span>G.V</span>
+    <span>Tu L.</span><span>Tu V.</span>
     <span class="ch-pen">🟠L</span><span class="ch-pen">🟠V</span>
     <span>Pts</span>
   </div>`;
@@ -510,27 +550,42 @@ function renderPredictions(){
   if(viewMode==='fecha'){
     html+=buildMatchesHTML(groupByDate(MATCHES),true);
   } else {
-    html+=buildMatchesHTML(groupByGroup(MATCHES),false);
+    populateGroupFilter();
+    const matches=MATCHES.filter(m=>m.group===selectedGroup);
+    html+=`<div class="group-hdr">${groupLabel(selectedGroup)} · partidos en orden cronológico</div>`;
+    html+=buildMatchesHTML(groupByDate(matches),true);
   }
   wrap.innerHTML=html;
 }
 
+function matchTimestamp(match){
+  const date=match.date||'9999-12-31';
+  const time=(match.time||'23:59').slice(0,5).padStart(5,'0');
+  return `${date}T${time}`;
+}
+
+function sortMatches(matches){
+  return [...matches].sort((a,b)=>
+    matchTimestamp(a).localeCompare(matchTimestamp(b))||(a.idx??0)-(b.idx??0)
+  );
+}
+
 function groupByDate(matches){
   const g={};
-  matches.forEach((m,i)=>{
+  sortMatches(matches).forEach((m,i)=>{
     const d=m.date||'Sin fecha';
     if(!g[d])g[d]=[];
-    g[d].push({...m,idx:i});
+    g[d].push({...m,idx:m.idx??i});
   });
   return g;
 }
 
 function groupByGroup(matches){
   const g={};
-  matches.forEach((m,i)=>{
+  sortMatches(matches).forEach((m,i)=>{
     const grp=m.group||m.round||'Eliminatoria';
     if(!g[grp])g[grp]=[];
-    g[grp].push({...m,idx:i});
+    g[grp].push({...m,idx:m.idx??i});
   });
   return g;
 }
@@ -574,10 +629,10 @@ function buildMatchesHTML(groups, isDate){
           <input class="score-num${hs?' filled':''}" type="text" value="${s2}" readonly>
         </div>
         <div class="team">${f2} ${t2.es}</div>
-        <input class="pred-inp" type="number" min="0" max="99" value="${pred.local??''}" placeholder="—" oninput="setPred(${m.idx},'local',this.value)">
-        <input class="pred-inp" type="number" min="0" max="99" value="${pred.visit??''}" placeholder="—" oninput="setPred(${m.idx},'visit',this.value)">
-        <input class="pred-inp pen" type="number" min="0" max="99" ${!isKO?'disabled':''} value="${pred.penL??''}" placeholder="—" oninput="setPred(${m.idx},'penL',this.value)">
-        <input class="pred-inp pen" type="number" min="0" max="99" ${!isKO?'disabled':''} value="${pred.penV??''}" placeholder="—" oninput="setPred(${m.idx},'penV',this.value)">
+        <input class="pred-inp" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" value="${pred.local??''}" placeholder="—" aria-label="Predicción de goles de ${t1.es}" oninput="setPred(${m.idx},'local',this)">
+        <input class="pred-inp" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" value="${pred.visit??''}" placeholder="—" aria-label="Predicción de goles de ${t2.es}" oninput="setPred(${m.idx},'visit',this)">
+        <input class="pred-inp pen" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" ${!isKO?'disabled':''} value="${pred.penL??''}" placeholder="—" aria-label="Predicción de penales de ${t1.es}" oninput="setPred(${m.idx},'penL',this)">
+        <input class="pred-inp pen" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" ${!isKO?'disabled':''} value="${pred.penV??''}" placeholder="—" aria-label="Predicción de penales de ${t2.es}" oninput="setPred(${m.idx},'penV',this)">
         <div class="pts-cell ${pCl}">${pts!==null?pts:'—'}</div>
       </div>`;
     });
@@ -603,12 +658,14 @@ function scrollToToday(){
   else showToast('No hay partidos hoy');
 }
 
-function setPred(idx,field,val){
+function setPred(idx,field,input){
   if(CU_IDX===null)return;
+  const clean=String(input.value||'').replace(/\D/g,'').slice(0,2);
+  input.value=clean;
   const key=`slot${CU_IDX}`;
   if(!allPreds[key])allPreds[key]={};
   if(!allPreds[key][idx])allPreds[key][idx]={};
-  allPreds[key][idx][field]=val===''?'':parseInt(val);
+  allPreds[key][idx][field]=clean===''?'':parseInt(clean,10);
   clearTimeout(window._st);
   window._st=setTimeout(()=>savePreds(true),1200);
 }
@@ -684,15 +741,9 @@ async function fetchResults(){
   try{
     const res=await fetch('https://raw.githubusercontent.com/openfootball/world-cup.json/master/2026/worldcup.json',{cache:'no-cache'});
     const data=await res.json();
-    // Add idx and parse group info
+    // Preserve the original index because predictions are stored by match index.
     MATCHES=(data.matches||[]).map((m,i)=>({...m,idx:i}));
-    // Infer group from round
-    MATCHES.forEach(m=>{
-      if((m.round||'').match(/matchday/i)){
-        // group from team data - we'll use round as group label
-        m.group=m.round;
-      }
-    });
+    populateGroupFilter();
     const played=MATCHES.filter(m=>m.score?.ft?.[0]!=null).length;
     const now=new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
     if(dot){dot.className='sdot';stxt.textContent=`${now} · ${played} resultados`;}
