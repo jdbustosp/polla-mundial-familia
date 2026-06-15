@@ -71,6 +71,8 @@ body.profile-mode .content{max-width:1100px;padding-top:28px;padding-bottom:32px
 .active-banner .nm{font-weight:800;font-size:1rem}
 .active-banner .sub{font-size:.72rem;opacity:.6;margin-top:1px}
 .btn-change{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:6px;color:rgba(255,255,255,.7);padding:6px 12px;font-size:.75rem;cursor:pointer;white-space:nowrap}
+.cloud-state{display:inline-flex;align-items:center;gap:4px;margin-top:4px;padding:2px 7px;border-radius:10px;background:rgba(255,255,255,.12);font-size:.62rem;font-weight:800}
+.cloud-state.online{color:#b9f6ca}.cloud-state.offline{color:#ffe082}
 
 /* ── FILTER BAR ── */
 .filter-bar{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap}
@@ -310,6 +312,88 @@ body.profile-mode .content{max-width:1100px;padding-top:28px;padding-bottom:32px
 <div id="toast">✅ Guardado</div>
 
 <script>
+// ══ SHARED CLOUD STORAGE ══
+const SUPABASE_URL='https://ujwvizrtritsnctpkgac.supabase.co';
+const SUPABASE_KEY='sb_publishable_x3EpB4I3OrHDZSFJPkiNgQ_SInkrdD8';
+const CLOUD_TABLE='family_predictions';
+let cloudReady=false;
+let cloudSaveTimers={};
+
+function cloudHeaders(extra={}){
+  return{
+    apikey:SUPABASE_KEY,
+    Authorization:`Bearer ${SUPABASE_KEY}`,
+    'Content-Type':'application/json',
+    ...extra
+  };
+}
+
+async function cloudFetch(path,options={}){
+  const response=await fetch(`${SUPABASE_URL}/rest/v1/${path}`,{
+    ...options,
+    headers:cloudHeaders(options.headers||{})
+  });
+  if(!response.ok){
+    const error=new Error(`Supabase ${response.status}`);
+    error.status=response.status;
+    throw error;
+  }
+  if(response.status===204)return null;
+  const text=await response.text();
+  return text?JSON.parse(text):null;
+}
+
+async function loadCloudPredictions(playerIdx=null){
+  try{
+    const filter=playerIdx===null?'':`&player_index=eq.${playerIdx}`;
+    const rows=await cloudFetch(`${CLOUD_TABLE}?select=player_index,predictions,updated_at${filter}`);
+    (rows||[]).forEach(row=>{
+      if(row.player_index<0||row.player_index>=MAX_PLAYERS)return;
+      const key=`slot${row.player_index}`;
+      allPreds[key]=row.predictions&&typeof row.predictions==='object'?row.predictions:{};
+      stSet(pKey(row.player_index),allPreds[key],true);
+    });
+    cloudReady=true;
+    return true;
+  }catch(e){
+    cloudReady=false;
+    return false;
+  }
+}
+
+async function saveCloudPredictions(idx){
+  try{
+    await cloudFetch(`${CLOUD_TABLE}?on_conflict=player_index`,{
+      method:'POST',
+      headers:{Prefer:'resolution=merge-duplicates,return=minimal'},
+      body:JSON.stringify({
+        player_index:idx,
+        predictions:allPreds[`slot${idx}`]||{},
+        updated_at:new Date().toISOString()
+      })
+    });
+    cloudReady=true;
+    updateCloudState();
+    return true;
+  }catch(e){
+    cloudReady=false;
+    updateCloudState();
+    return false;
+  }
+}
+
+function queueCloudSave(idx){
+  clearTimeout(cloudSaveTimers[idx]);
+  cloudSaveTimers[idx]=setTimeout(()=>saveCloudPredictions(idx),500);
+}
+
+function updateCloudState(){
+  const state=document.getElementById('cloud-state');
+  if(!state)return;
+  state.className=`cloud-state ${cloudReady?'online':'offline'}`;
+  state.textContent=cloudReady?'☁ Compartido entre celulares':'📱 Solo este celular';
+}
+
 // ══ STORAGE ══
 async function stGet(k,s=false){
   try{
@@ -400,6 +484,7 @@ function pKey(idx){ return `preds_slot${idx}`; }
 async function init(){
   await loadPlayers();
   await loadAllPreds();
+  await loadCloudPredictions();
   await fetchResults();
   renderParticipants();
   buildLookupSelect();
@@ -412,12 +497,13 @@ async function loadPlayers(){
   }catch(e){}
 }
 
-async function loadAllPreds(){
+async function loadAllPreds(refreshCloud=false){
   for(let i=0;i<MAX_PLAYERS;i++){
     const r=await stGet(pKey(i),true);
     if(r){ try{ allPreds[`slot${i}`]=JSON.parse(r.value); }catch(e){ allPreds[`slot${i}`]={}; } }
     else allPreds[`slot${i}`]={};
   }
+  if(refreshCloud)await loadCloudPredictions();
 }
 
 function myPreds(){ return CU_IDX!==null ? (allPreds[`slot${CU_IDX}`]||{}) : {}; }
@@ -468,9 +554,10 @@ function renderParticipants(){
   grid.innerHTML=html;
 }
 
-function selectPlayer(idx){
+async function selectPlayer(idx){
   CU_IDX=idx;
   try{localStorage.setItem('polla_me',idx);}catch(e){}
+  await loadCloudPredictions(idx);
   document.body.classList.remove('profile-mode');
   renderParticipants();
   showToast(`✅ Entraste como ${players[idx].name}`);
@@ -532,8 +619,10 @@ function renderPredictions(){
   const avatar=p.photo?`<img src="${p.photo}" alt="">`:p.name[0].toUpperCase();
   ab.innerHTML=`<div class="ava">${avatar}</div>
     <div class="info"><div class="nm">${p.name}</div>
-    <div class="sub">${bd.total} pts · ${bd.played} partidos llenados · ${MATCHES.filter(m=>m.score?.ft?.[0]!=null).length} jugados</div></div>
+    <div class="sub">${bd.total} pts · ${bd.played} partidos llenados · ${MATCHES.filter(m=>m.score?.ft?.[0]!=null).length} jugados</div>
+    <span class="cloud-state" id="cloud-state"></span></div>
     <button class="btn-change" onclick="openProfiles()">Cambiar perfil</button>`;
+  updateCloudState();
 
   if(!MATCHES.length){
     document.getElementById('pred-table-wrap').innerHTML='<div class="empty">⏳ Cargando partidos...</div>';
@@ -701,12 +790,14 @@ function setPred(idx,field,input){
   if(!allPreds[key][idx])allPreds[key][idx]={};
   allPreds[key][idx][field]=clean===''?'':parseInt(clean,10);
   stSet(pKey(CU_IDX),allPreds[key],true);
+  queueCloudSave(CU_IDX);
 }
 
 async function savePreds(silent=false){
   if(CU_IDX===null){showToast('⚠️ Selecciona tu nombre primero');return;}
   await stSet(pKey(CU_IDX),allPreds[`slot${CU_IDX}`],true);
-  if(!silent)showToast('✅ Predicciones guardadas');
+  const shared=await saveCloudPredictions(CU_IDX);
+  if(!silent)showToast(shared?'☁️ Guardado para todos':'📱 Guardado solo en este celular');
 }
 
 // ══ RESULTS TAB ══
@@ -840,7 +931,7 @@ function getBreakdown(preds){
 async function renderTabla(){
   const c=document.getElementById('tabla-body');
   c.innerHTML='<div class="loader">⏳ Calculando...</div>';
-  await loadAllPreds();
+  await loadAllPreds(true);
   const rows=[];
   for(let i=0;i<MAX_PLAYERS;i++){
     if(!players[i])continue;
@@ -920,7 +1011,7 @@ async function renderLookup(){
     <div style="text-align:center;color:var(--ac)">Pts</div>
   </div>`;
 
-  await loadAllPreds();
+  await loadAllPreds(true);
   let anyPlayer=false;
   for(let i=0;i<MAX_PLAYERS;i++){
     if(!players[i])continue;
