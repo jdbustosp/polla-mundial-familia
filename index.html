@@ -71,6 +71,12 @@ body.profile-mode .content{max-width:1100px;padding-top:28px;padding-bottom:32px
 .active-banner .nm{font-weight:800;font-size:1rem}
 .active-banner .sub{font-size:.72rem;opacity:.6;margin-top:1px}
 .btn-change{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:6px;color:rgba(255,255,255,.7);padding:6px 12px;font-size:.75rem;cursor:pointer;white-space:nowrap}
+.admin-control{margin:0 0 10px;padding:10px 12px;border:1px solid #f1c27d;border-radius:8px;background:#fff7e6;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.admin-control.on{border-color:#34a853;background:#e8f5e9}
+.admin-title{font-size:.78rem;font-weight:900;color:var(--dk);margin-bottom:2px}
+.admin-copy{font-size:.7rem;color:var(--mt);line-height:1.35}
+.admin-btn{border:none;border-radius:7px;padding:8px 11px;font-size:.72rem;font-weight:900;cursor:pointer;color:#fff;background:var(--bl);white-space:nowrap}
+.admin-control.on .admin-btn{background:var(--rd)}
 .cloud-state{display:inline-flex;align-items:center;gap:4px;margin-top:4px;padding:2px 7px;border-radius:10px;background:rgba(255,255,255,.12);font-size:.62rem;font-weight:800}
 .cloud-state.online{color:#b9f6ca}.cloud-state.offline{color:#ffe082}
 
@@ -250,7 +256,8 @@ body.profile-mode .content{max-width:1100px;padding-top:28px;padding-bottom:32px
         </div>
       </div>
       <div class="card-body" style="padding:10px">
-        <div class="notice info">🔒 Cada predicción se cierra automáticamente al comenzar el partido. Después de la hora indicada en Colombia ya no se puede editar.</div>
+        <div class="notice info" id="prediction-lock-notice">🔒 Cada predicción se cierra automáticamente al comenzar el partido. Después de la hora indicada en Colombia ya no se puede editar.</div>
+        <div id="admin-edit-control"></div>
         <!-- Filter bar -->
         <div class="filter-bar">
           <span class="filter-label">Ver por:</span>
@@ -471,6 +478,8 @@ const PARTICIPANTS=[
   {name:'MATEO',photo:'assets/profiles/mateo.jpg',position:'50% 58%'}
 ];
 const MAX_PLAYERS = PARTICIPANTS.length;
+const ADMIN_PLAYER_NAME='JUANCHO';
+const ADMIN_SETTINGS_KEY='__adminSettings';
 let players = PARTICIPANTS.map((p,i)=>({...p,key:`slot${i}`}));
 let CU_IDX = null; // current user index
 let MATCHES = [];
@@ -510,6 +519,14 @@ async function loadAllPreds(refreshCloud=false){
 }
 
 function myPreds(){ return CU_IDX!==null ? (allPreds[`slot${CU_IDX}`]||{}) : {}; }
+function adminPlayerIndex(){ return players.findIndex(p=>p.name===ADMIN_PLAYER_NAME); }
+function adminSettings(){
+  const idx=adminPlayerIndex();
+  if(idx<0)return{};
+  const data=allPreds[`slot${idx}`]||{};
+  return data[ADMIN_SETTINGS_KEY]||{};
+}
+function lateEditsEnabled(){ return adminSettings().allowLateEdits===true; }
 
 // ══ TABS ══
 function showTab(name){
@@ -561,6 +578,7 @@ async function selectPlayer(idx){
   CU_IDX=idx;
   try{localStorage.setItem('polla_me',idx);}catch(e){}
   await loadCloudPredictions(idx);
+  if(idx!==adminPlayerIndex())await loadCloudPredictions(adminPlayerIndex());
   document.body.classList.remove('profile-mode');
   renderParticipants();
   showToast(`✅ Entraste como ${players[idx].name}`);
@@ -626,6 +644,8 @@ function renderPredictions(){
     <span class="cloud-state" id="cloud-state"></span></div>
     <button class="btn-change" onclick="openProfiles()">Cambiar perfil</button>`;
   updateCloudState();
+  updatePredictionLockNotice();
+  renderAdminEditControl();
 
   if(!MATCHES.length){
     document.getElementById('pred-table-wrap').innerHTML='<div class="empty">⏳ Cargando partidos...</div>';
@@ -686,11 +706,12 @@ function matchTimestamp(match){
 }
 
 function predictionIsOpen(match,now=Date.now()){
-  return Boolean(match)&&matchTimestamp(match)>now;
+  return lateEditsEnabled()||(Boolean(match)&&matchTimestamp(match)>now);
 }
 
 function schedulePredictionLockRefresh(){
   clearTimeout(predictionLockTimer);
+  if(lateEditsEnabled())return;
   const now=Date.now();
   const nextKickoff=sortMatches(MATCHES)
     .map(matchTimestamp)
@@ -822,6 +843,59 @@ function setPred(idx,field,input){
   allPreds[key][idx][field]=clean===''?'':parseInt(clean,10);
   stSet(pKey(CU_IDX),allPreds[key],true);
   queueCloudSave(CU_IDX);
+}
+
+function updatePredictionLockNotice(){
+  const notice=document.getElementById('prediction-lock-notice');
+  if(!notice)return;
+  if(lateEditsEnabled()){
+    notice.className='notice warn';
+    notice.textContent='🔓 Edición tardía habilitada por JUANCHO: todos los perfiles pueden editar partidos anteriores temporalmente.';
+  }else{
+    notice.className='notice info';
+    notice.textContent='🔒 Cada predicción se cierra automáticamente al comenzar el partido. Después de la hora indicada en Colombia ya no se puede editar.';
+  }
+}
+
+function renderAdminEditControl(){
+  const box=document.getElementById('admin-edit-control');
+  if(!box)return;
+  const adminIdx=adminPlayerIndex();
+  const isAdmin=CU_IDX===adminIdx;
+  if(!isAdmin){
+    box.style.display='none';
+    box.innerHTML='';
+    return;
+  }
+  const enabled=lateEditsEnabled();
+  box.style.display='block';
+  box.innerHTML=`<div class="admin-control${enabled?' on':''}">
+    <div>
+      <div class="admin-title">Control interno de JUANCHO</div>
+      <div class="admin-copy">${enabled
+        ?'Modo abierto: todos pueden corregir predicciones de partidos anteriores.'
+        :'Modo normal: cada partido se bloquea cuando comienza.'}</div>
+    </div>
+    <button class="admin-btn" onclick="toggleLateEdits()">${enabled?'Volver a bloquear':'Permitir editar anteriores'}</button>
+  </div>`;
+}
+
+async function toggleLateEdits(){
+  const adminIdx=adminPlayerIndex();
+  if(CU_IDX!==adminIdx){showToast('Solo JUANCHO puede cambiar este modo');return;}
+  const key=`slot${adminIdx}`;
+  if(!allPreds[key])allPreds[key]={};
+  if(!allPreds[key][ADMIN_SETTINGS_KEY])allPreds[key][ADMIN_SETTINGS_KEY]={};
+  const next=!lateEditsEnabled();
+  allPreds[key][ADMIN_SETTINGS_KEY].allowLateEdits=next;
+  allPreds[key][ADMIN_SETTINGS_KEY].updatedAt=new Date().toISOString();
+  await stSet(pKey(adminIdx),allPreds[key],true);
+  const shared=await saveCloudPredictions(adminIdx);
+  schedulePredictionLockRefresh();
+  renderPredictions();
+  showToast(shared
+    ?(next?'🔓 Edición tardía activada':'🔒 Bloqueo automático activado')
+    :(next?'🔓 Activado solo en este celular':'🔒 Cambiado solo en este celular'));
 }
 
 async function savePreds(silent=false){
@@ -1076,12 +1150,14 @@ function showToast(msg){
 
 // ══ START ══
 init();
-window.addEventListener('focus',()=>{
+window.addEventListener('focus',async()=>{
+  await loadCloudPredictions(adminPlayerIndex());
   if(currentTab==='predicciones')renderPredictions();
   schedulePredictionLockRefresh();
 });
-document.addEventListener('visibilitychange',()=>{
+document.addEventListener('visibilitychange',async()=>{
   if(document.visibilityState==='visible'){
+    await loadCloudPredictions(adminPlayerIndex());
     if(currentTab==='predicciones')renderPredictions();
     schedulePredictionLockRefresh();
   }
